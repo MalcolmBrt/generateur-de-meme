@@ -7,7 +7,7 @@ import requests
 import random
 
 load_dotenv()
-APIKEY_GOOGLEAISTUDIO = os.getenv("APIKEY_GOOGLEAISTUDIO")
+APIKEY_OPENROUTER = os.getenv("APIKEY_OPENROUTER")
 USERNAME_IMGFLIP = os.getenv("USERNAME_IMGFLIP")
 PASSWORD_IMGFLIP = os.getenv("PASSWORD_IMGFLIP")
 
@@ -23,11 +23,8 @@ def recuperer_random_meme():
     else:
         raise Exception("Erreur lors de la récupération des mèmes : " + data.get("error_message", "inconnue"))
 
-def generer_legendes(nombre_cases, description):
-    client = genai.Client(
-        api_key=APIKEY_GOOGLEAISTUDIO,
-    )
-    
+def generer_legendes(model, nombre_cases, description):
+    url = "https://openrouter.ai/api/v1/chat/completions"
     prompt = f"""
         Tu es un générateur de mèmes drôles, au ton sarcastique, absurde ou ironique selon le contexte. Ton objectif est de créer un texte percutant et humoristique qui pourrait apparaître sur un mème internet viral.
         Génère un texte en {nombre_cases} phrases courtes, dans le style des mèmes classiques (format image avec texte). Utilise des expressions familières, des punchlines ou des références à la culture web si pertinent.
@@ -39,37 +36,33 @@ def generer_legendes(nombre_cases, description):
         - N'inclus pas d'explication ou de commentaire hors mème.
 
         Réponds uniquement par les phrases générées, séparées par un simple retour à la ligne, sans lignes vides ni espaces superflus au début ou à la fin des phrases.
-        """
-
-    model = "gemini-2.5-flash-preview-05-20"
+        """ 
+    headers = {
+    "Authorization": f"Bearer {APIKEY_OPENROUTER}",
+    "Content-Type": "application/json"
+    }
+    payload = {
+        "model": model,
+        "messages": [
+            {
+            "role": "system",
+            "content": prompt
+            }
+        ]
+    }
     
     while True:
-        contents = [
-            types.Content(
-                role="user",
-                parts=[
-                    types.Part.from_text(text=prompt),
-                ],
-            ),
-        ]
-        generate_content_config = types.GenerateContentConfig(
-            response_mime_type="text/plain",
-        )
-        
-        legendes = []
-        for chunk in client.models.generate_content_stream(
-            model=model,
-            contents=contents,
-            config=generate_content_config,
-        ):
-            legendes.extend(chunk.text.splitlines())
-            
-        # Nettoyage
-        legendes = [ligne.strip() for ligne in legendes if ligne.strip()]
+        response = requests.post(url, headers=headers, json=payload)
+        data = response.json()
 
-        if len(legendes) == nombre_cases:
-            return legendes
-        # Sinon, on boucle automatiquement jusqu'à ce que ce soit bon
+        try:
+            raw_text = data["choices"][0]["message"]["content"]
+            lignes = [ligne.strip() for ligne in raw_text.splitlines() if ligne.strip()]
+            if len(lignes) == nombre_cases:
+                return lignes
+        except Exception:
+            continue  # Recommence silencieusement si une erreur survient
+
 
 
 def generer_meme(template_id, legendes):
@@ -100,7 +93,7 @@ def generer_meme(template_id, legendes):
 if __name__=="__main__":
     meme=recuperer_random_meme()
     print(meme)
-    legendes=generer_legendes(meme["box_count"], meme["name"])
+    legendes=generer_legendes("anthropic/claude-3.5-haiku", meme["box_count"], meme["name"])
     print(legendes)
     newmeme=generer_meme(meme["id"], legendes)
     print(newmeme)
