@@ -3,9 +3,19 @@ from dotenv import load_dotenv
 import os
 from google import genai
 from google.genai import types
+import requests
+import random
 
-# def recuperer_meme():
-    
+def recuperer_random_meme():
+    url = "https://api.imgflip.com/get_memes"
+    response = requests.get(url)
+    data = response.json()
+    if data["success"]:
+        memes = data["data"]["memes"]
+        meme = random.choice(memes)
+        return meme
+    else:
+        raise Exception("Erreur lors de la récupération des mèmes : " + data.get("error_message", "inconnue"))
 
 def generer_legendes(nombre_cases, description):
     load_dotenv()
@@ -23,8 +33,7 @@ def generer_legendes(nombre_cases, description):
         - Utilise un ton drôle, absurde, ou sarcastique, selon ce qui est le plus adapté au contexte.
         - N'inclus pas d'explication ou de commentaire hors mème.
 
-        Réponds uniquement par les phrases générées, sans aucun texte en plus.
-        """
+        Réponds uniquement par les phrases générées, séparées par un simple retour à la ligne, sans lignes vides ni espaces superflus au début ou à la fin des phrases.        """
 
     model = "gemini-2.5-flash-preview-05-20"
     contents = [
@@ -38,10 +47,16 @@ def generer_legendes(nombre_cases, description):
     generate_content_config = types.GenerateContentConfig(
         response_mime_type="text/plain",
     )
-
+    
+    legendes = []
     for chunk in client.models.generate_content_stream(
         model=model,
         contents=contents,
         config=generate_content_config,
     ):
-        print(chunk.text, end="")
+        legendes.extend(chunk.text.splitlines())
+        
+    return legendes
+
+if __name__=="__main__":
+    print(generer_legendes(2, "Squid Game"))
