@@ -1,8 +1,9 @@
 import streamlit as st
-from utils import *
+from meme import Meme
 
 
 
 if __name__=="__main__":
-    print(creer_meme())
+    meme = Meme()
+    print(meme.create())
     
