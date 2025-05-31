@@ -4,11 +4,15 @@ import requests
 import random
 from datetime import datetime
 import pytz
+from supabase import create_client
 
 load_dotenv()
 APIKEY_OPENROUTER = os.getenv("APIKEY_OPENROUTER")
 USERNAME_IMGFLIP = os.getenv("USERNAME_IMGFLIP")
 PASSWORD_IMGFLIP = os.getenv("PASSWORD_IMGFLIP")
+URL_SUPABASE = os.getenv("URL_SUPABASE")
+APIKEY_SUPABASE = os.getenv("APIKEY_SUPABASE")
+supabase = create_client(URL_SUPABASE, APIKEY_SUPABASE)
 
 class Meme:
     def __init__(self):
@@ -22,7 +26,6 @@ class Meme:
         self.captions = []
         self.title = None
         self.url = None
-
 
     def get_random_template(self):
         url = "https://api.imgflip.com/get_memes"
@@ -51,6 +54,7 @@ class Meme:
             - Chaque phrase doit être indépendante et pouvoir figurer seule sur une case d'un mème (bulle ou zone de texte).
             - Utilise un ton drôle, absurde, ou sarcastique, selon ce qui est le plus adapté au contexte.
             - N'inclus pas d'explication ou de commentaire hors mème.
+            - N'utilise pas d'émojis, ni d'émoticônes.
 
             Réponds uniquement par les phrases générées, séparées par un simple retour à la ligne, sans lignes vides ni espaces superflus au début ou à la fin des phrases.
             """ 
@@ -115,8 +119,6 @@ class Meme:
         data = response.json()
         self.title = data["choices"][0]["message"]["content"].strip()
 
-
-
     def create_imgflip_meme(self):
         url = "https://api.imgflip.com/caption_image"
         
@@ -139,9 +141,28 @@ class Meme:
         else:
             raise Exception("Erreur : " + data.get("error_message", "inconnue"))
         
+    def save_to_supabase(self):
+        data = {
+            "created_at": self.created_at.isoformat(),
+            "template_id": self.template_id,
+            "template_name": self.template_name,
+            "template_url": self.template_url,
+            "box_count": self.box_count,
+            "captions": self.captions,
+            "title": self.title,
+            "url": self.url
+        }
+        response = supabase.table("memes").insert(data).execute()
+        return response.data
+
+    @staticmethod
+    def get_all():
+        response = supabase.table("memes").select("*").execute()
+        return response.data
+
     def create(self):
         self.get_random_template()
         self.generate_captions()
         self.generate_title()
         self.create_imgflip_meme()
-        return self.url
+        self.save_to_supabase()

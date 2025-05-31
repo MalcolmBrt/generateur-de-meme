@@ -5,5 +5,6 @@ from meme import Meme
 
 if __name__=="__main__":
     meme = Meme()
-    print(meme.create())
-    
+    meme.create()
+    memes = Meme.get_all()
+    print(memes)
