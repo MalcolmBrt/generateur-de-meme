@@ -25,6 +25,7 @@ class Meme:
         self.box_count = None
         self.captions = []
         self.title = None
+        self.style = None
         self.url = None
 
     def get_random_template(self):
@@ -41,10 +42,11 @@ class Meme:
         else:
             raise Exception("Erreur lors de la récupération des mèmes : " + data.get("error_message", "inconnue"))
 
-    def generate_captions(self):
+    def generate_captions(self, style="absurde"):
         url = "https://openrouter.ai/api/v1/chat/completions"
+        self.style = style
         prompt = f"""
-            Tu es un générateur de mèmes drôles, au ton sarcastique, absurde ou ironique selon le contexte.
+            Tu es un générateur de mèmes drôles dans un style {self.style}.
             Ton objectif est de créer un texte percutant et humoristique qui pourrait apparaître sur un mème internet viral.
             Génère un texte en {self.box_count} phrases courtes, dans le style des mèmes classiques (format image avec texte).
             Utilise des expressions familières, des punchlines ou des références à la culture web si pertinent.
@@ -150,6 +152,7 @@ class Meme:
             "box_count": self.box_count,
             "captions": self.captions,
             "title": self.title,
+            "style": self.style,
             "url": self.url
         }
         response = supabase.table("memes").insert(data).execute()
@@ -158,11 +161,44 @@ class Meme:
     @staticmethod
     def get_all():
         response = supabase.table("memes").select("*").execute()
-        return response.data
+        memes = []
 
-    def create(self):
+        for meme_data in response.data:
+            meme = Meme()
+            meme.created_at = meme_data["created_at"]
+            meme.template_id = meme_data["template_id"]
+            meme.template_name = meme_data["template_name"]
+            meme.template_url = meme_data["template_url"]
+            meme.box_count = meme_data["box_count"]
+            meme.captions = meme_data["captions"]
+            meme.title = meme_data["title"]
+            meme.style = meme_data["style"]
+            meme.url = meme_data["url"]
+            memes.append(meme)
+
+        return memes
+
+
+    def create(self, style):
         self.get_random_template()
-        self.generate_captions()
+        self.generate_captions(style)
         self.generate_title()
         self.create_imgflip_meme()
         self.save_to_supabase()
+        
+    def delete_by_url(self, url):
+        response = supabase.table("memes").delete().eq("url", url).execute()
+        return response.data
+        
+        
+if __name__=="__main__":
+    memetest = Meme()
+    memetest.template_id = 1
+    memetest.template_name = "test"
+    memetest.template_url = "https://test.com/"
+    memetest.box_count = 2
+    memetest.captions = ["test 1", "test 2"]
+    memetest.title = "title test"
+    memetest.style = "absurde"
+    memetest.url = "https://test.com/"
+    memetest.save_to_supabase()
