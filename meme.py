@@ -5,6 +5,7 @@ import random
 from datetime import datetime
 import pytz
 from supabase import create_client
+from PIL import ImageDraw, ImageFont
 
 load_dotenv()
 APIKEY_OPENROUTER = os.getenv("APIKEY_OPENROUTER")
@@ -157,6 +158,19 @@ class Meme:
         }
         response = supabase.table("memes").insert(data).execute()
         return response.data
+    
+    def generate(self, image, top_text, bottom_text):
+        draw = ImageDraw.Draw(image)
+        font_path = "arial.ttf"  # Ou un autre fichier .ttf présent sur ta machine
+        try:
+            font = ImageFont.truetype(font_path, size=40)
+        except:
+            font = ImageFont.load_default()
+
+        width, height = image.size
+        draw.text((width/2, 10), top_text, fill="white", anchor="ma", font=font)
+        draw.text((width/2, height - 60), bottom_text, fill="white", anchor="ma", font=font)
+        return image
 
     @staticmethod
     def get_all():

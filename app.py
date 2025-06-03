@@ -39,13 +39,13 @@ elif menu == "🎨 Générer un mème":
     if uploaded_image and st.button("✨ Générer le mème personnalisé"):
         image = Image.open(uploaded_image)
         meme = generator.generate(image, top_text, bottom_text)
-        st.image(meme, caption="Votre mème personnalisé", use_column_width=True)
+        st.image(meme, caption="Votre mème personnalisé", use_container_width=True)
 
     elif not uploaded_image and st.button("🎲 Générer automatiquement avec IA"):
         generator.create(style=style)
         response = requests.get(generator.url)
         if response.status_code == 200:
-            st.image(generator.url, caption=generator.title, use_column_width=True)
+            st.image(generator.url, caption=generator.title, use_container_width=True)
             st.download_button(
                 label="📥 Télécharger le mème",
                 data=response.content,
